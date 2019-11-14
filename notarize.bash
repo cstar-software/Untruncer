@@ -1,0 +1,1 @@
+sh $UPDATE_SCRIPTS/notarize.bash --user genericptr@gmail.com --password ypdb-yigy-htzp-ooty --app Untruncer --bundle com.alchemistguild.untruncer -o notary_output
