@@ -148,12 +148,17 @@ begin
   result := true;
 end;
 
+{$define EXECUTE_COCOA}
+
 procedure TWorkerThread.Execute;
 var
-  command,
   untruncPath: ansistring;
   movie: TMovieItem;
+  {$ifdef EXECUTE_COCOA}
+  task: NSTask;
+  {$else}
   process: TProcess;
+  {$endif}
 begin
   untruncPath := NSBundle.mainBundle.resourcePath.UTF8String+'/untrunc';
   while App.brokenMovies.Count > 0 do
@@ -162,6 +167,15 @@ begin
       writeln('processing ',movie.path);
       App.performSelectorOnMainThread_withObject_waitUntilDone(objcselector('startedProcessing:'), NSSTR(movie.path), true);
 
+      {$ifdef EXECUTE_COCOA}
+      task := NSTask.alloc.init;
+      task.setLaunchPath(NSSTR(untruncPath));
+      task.setArguments(NSMutableArray([App.workingMovie, movie.path]));      
+      task.launch;
+      task.waitUntilExit;
+      task.release;
+      {$else}
+      // https://wiki.freepascal.org/Executing_External_Programs
       process := TProcess.Create(nil);
       process.Executable := untruncPath;
       with process.Parameters do
@@ -169,13 +183,14 @@ begin
           Add(string(App.workingMovie));
           Add(movie.path);
         end;
-      process.Options := process.Options + [poWaitOnExit, poNoConsole];
+      process.Options := process.Options + [poWaitOnExit];
       process.Execute;
       process.Free;
+      {$endif}
+
       writeln('finished');
 
       App.brokenMovies.Remove(movie);
-
       App.performSelectorOnMainThread_withObject_waitUntilDone(objcselector('finishedProcessing:'), NSSTR(movie.path), true);
       writeln('next video');
     end;
@@ -280,6 +295,8 @@ begin
 end;
 
 procedure TAppDelegate.applicationDidFinishLaunching(notification: NSNotification);
+var
+  arguments: NSMutableArray;
 begin
   processIndicator.setHidden(true);
   progressLabel.setHidden(true);

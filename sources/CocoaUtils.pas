@@ -1,6 +1,7 @@
 {$mode objfpc}
 {$modeswitch objectivec1}
 {$modeswitch cblocks}
+{$assertions on}
 
 unit CocoaUtils;
 interface
@@ -11,6 +12,7 @@ function ShowAlert(messageText: ansistring; informativeText: ansistring = ''; sh
 
 operator = (left: NSString; right: string): boolean;
 operator explicit (right: NSObject): string;
+operator := (const right: array of const): NSMutableArray;
 
 implementation
 
@@ -40,6 +42,32 @@ begin
     end
   else
     result := alert.runModal;
+end;
+
+operator := (const right: array of const): NSMutableArray;
+var
+  i: integer;
+begin
+  result := NSMutableArray.array_;
+  for i := 0 to high(right) do
+    begin
+      case right[i].vtype of
+        vtInteger:
+          result.addObject(NSNumber.numberWithInt(right[i].vinteger));
+        vtExtended:
+          result.addObject(NSNumber.numberWithDouble(right[i].vextended^));
+        vtString:
+          result.addObject(NSSTR(right[i].vstring^));
+        vtPointer:
+          result.addObject(NSObject(right[i].vpointer));
+        vtAnsiString:
+          result.addObject(NSSTR(right[i].vansistring));
+        vtChar:
+          result.addObject(NSSTR(right[i].vchar));
+        otherwise
+          Assert(false, 'variable argument value type '+IntToStr(right[i].vtype)+' is invalid.');
+      end;
+    end;
 end;
 
 operator = (left: NSString; right: string): boolean;
