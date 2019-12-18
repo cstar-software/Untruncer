@@ -10,7 +10,7 @@ uses
 
 type
   TDropImageView = objcclass (NSImageView, NSDraggingDestinationProtocol)        
-    private
+    public
       procedure mouseDown (theEvent: NSEvent); override;
 
       { NSDraggingDestinationProtocol }
@@ -43,14 +43,16 @@ type
       workerThread: TWorkerThread;
       processIndicator: NSProgressIndicator;
       progressLabel: NSTextField;
-      popoverTextField: NSTextField;
   	public
       procedure awakeFromNib; override;
-  		procedure applicationDidFinishLaunching(notification: NSNotification); message 'applicationDidFinishLaunching:';
       procedure start(sender: id); message 'start:';
       procedure finished(sender: id); message 'finished:';
       procedure startedProcessing(filePath: NSString); message 'startedProcessing:';
       procedure finishedProcessing(filePath: NSString); message 'finishedProcessing:';
+        
+      { NSApplicationDelegateProtocol }
+      procedure applicationDidFinishLaunching(notification: NSNotification); message 'applicationDidFinishLaunching:';
+      function applicationShouldTerminateAfterLastWindowClosed (sender: NSApplication): boolean; message 'applicationShouldTerminateAfterLastWindowClosed:';
 
       { NSTableViewDataSourceProtocol }
       function numberOfRowsInTableView (tableView: NSTableView): NSInteger; message 'numberOfRowsInTableView:';
@@ -139,6 +141,7 @@ begin
   for pasteboardItem in sender.draggingPasteboard.pasteboardItems do
     begin
       urlString := pasteboardItem.stringForType(NSString(kUTTypeFileURL));
+      writeln(urlString.UTF8String);
       url := NSURL.URLWithString(urlString);
       App.workingMovie := url.path.retain;
 
@@ -212,12 +215,11 @@ var
   pasteboardItem: NSPasteboardItem;
   urlString: NSString;
   url: NSURL;
-  path: NSString;
   item: TMovieItem;
 begin
   pboard := NSDraggingInfoProtocol(info).draggingPasteboard;
   result := false;
-  
+
   for pasteboardItem in pboard.pasteboardItems do
     begin
       urlString := pasteboardItem.stringForType(NSString(kUTTypeFileURL));
@@ -294,9 +296,12 @@ begin
   moviesTableView.registerForDraggedTypes(NSArray.arrayWithObjects(NSString(kUTTypeFileURL), nil));
 end;
 
+function TAppDelegate.applicationShouldTerminateAfterLastWindowClosed (sender: NSApplication): boolean;
+begin
+  result := true;
+end;
+
 procedure TAppDelegate.applicationDidFinishLaunching(notification: NSNotification);
-var
-  arguments: NSMutableArray;
 begin
   processIndicator.setHidden(true);
   progressLabel.setHidden(true);
